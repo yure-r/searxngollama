@@ -1,0 +1,43 @@
+services:
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:${OPENWEBUI_TAG:-main}
+    container_name: open-webui
+    restart: always
+    environment:
+      - OPENAI_API_BASE_URL=http://ollama:11434/v1
+      - USE_OLLAMA_DOCKER=false
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+      - RAG_WEB_SEARCH_ENGINE=searxng
+      - SEARXNG_QUERY_URL=http://host.docker.internal:8080/search?q=
+      - ENABLE_RAG_WEB_SEARCH=true
+      - WEBUI_ENABLE_BROWSER=true
+      - WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY:-$(openssl rand -hex 32)}
+    depends_on:
+      - searxng
+    networks:
+      - webui
+    ports:
+      - "3000:8080"      # UI only
+    volumes:
+      - ~/docker/filesystem:/app/backend/data    
+
+  searxng:
+    image: searxng/searxng:latest
+    container_name: searxng
+    restart: always
+    volumes:
+      - ~/docker/filesystem/searxng:/etc/searxng
+    environment:
+      - SEARXNG_CONFIG_PATH=/etc/searxng/settings.yml
+    ports:
+      - "8080:8080"
+    networks:
+      - webui
+
+networks:
+  webui:
+    driver: bridge
+
+volumes:
+  ollama_data:
+  searxng_data:
